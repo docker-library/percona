@@ -9,7 +9,7 @@ RUN apt-key adv --keyserver ha.pool.sks-keyservers.net --recv-keys 430BDF5C56E7C
 RUN echo 'deb http://repo.percona.com/apt wheezy main' > /etc/apt/sources.list.d/percona.list
 
 ENV PERCONA_MAJOR 5.6
-ENV PERCONA_VERSION 5.6.25-73.0-1.wheezy
+ENV PERCONA_VERSION 5.6.25-73.1-1.wheezy
 
 RUN apt-get update \
 	&& apt-get install -y \
