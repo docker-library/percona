@@ -9,7 +9,7 @@ if [ ${#versions[@]} -eq 0 ]; then
 fi
 versions=( "${versions[@]%/}" )
 
-packagesUrl='http://repo.percona.com/apt/dists/wheezy/main/binary-amd64/Packages'
+packagesUrl='http://repo.percona.com/apt/dists/jessie/main/binary-amd64/Packages'
 packages="$(echo "$packagesUrl" | sed -r 's/[^a-zA-Z.-]+/-/g')"
 curl -sSL "${packagesUrl}.gz" | gunzip > "$packages"
 
