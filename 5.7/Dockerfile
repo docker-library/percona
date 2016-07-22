@@ -21,11 +21,15 @@ RUN set -x \
 RUN mkdir /docker-entrypoint-initdb.d
 
 # install "pwgen" for randomizing passwords
-RUN apt-get update && apt-get install -y pwgen && rm -rf /var/lib/apt/lists/*
+# install "apt-transport-https" for Percona's repo (switched to https-only)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+		apt-transport-https \
+		pwgen \
+	&& rm -rf /var/lib/apt/lists/*
 
 RUN apt-key adv --keyserver ha.pool.sks-keyservers.net --recv-keys 430BDF5C56E7C94E848EE60C1C4CBDCDCD2EFD2A
 
-RUN echo 'deb http://repo.percona.com/apt jessie main' > /etc/apt/sources.list.d/percona.list
+RUN echo 'deb https://repo.percona.com/apt jessie main' > /etc/apt/sources.list.d/percona.list
 
 ENV PERCONA_MAJOR 5.7
 ENV PERCONA_VERSION 5.7.13-6-1.jessie
