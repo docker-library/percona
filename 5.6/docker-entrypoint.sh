@@ -81,44 +81,46 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
 			exit 1
 		fi
 
-		if [ -z "$MYSQL_INITDB_SKIP_TZINFO" ]; then
-			# sed is for https://bugs.mysql.com/bug.php?id=20545
-			mysql_tzinfo_to_sql /usr/share/zoneinfo | sed 's/Local time zone must be set--see zic manual page/FCTY/' | "${mysql[@]}" mysql
-		fi
-
-		if [ ! -z "$MYSQL_RANDOM_ROOT_PASSWORD" ]; then
-			MYSQL_ROOT_PASSWORD="$(pwgen -1 32)"
-			echo "GENERATED ROOT PASSWORD: $MYSQL_ROOT_PASSWORD"
-		fi
-		"${mysql[@]}" <<-EOSQL
-			-- What's done in this file shouldn't be replicated
-			--  or products like mysql-fabric won't work
-			SET @@SESSION.SQL_LOG_BIN=0;
-
-			DELETE FROM mysql.user ;
-			CREATE USER 'root'@'%' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}' ;
-			GRANT ALL ON *.* TO 'root'@'%' WITH GRANT OPTION ;
-			DROP DATABASE IF EXISTS test ;
-			FLUSH PRIVILEGES ;
-		EOSQL
-
-		if [ ! -z "$MYSQL_ROOT_PASSWORD" ]; then
-			mysql+=( -p"${MYSQL_ROOT_PASSWORD}" )
-		fi
-
-		if [ "$MYSQL_DATABASE" ]; then
-			echo "CREATE DATABASE IF NOT EXISTS \`$MYSQL_DATABASE\` ;" | "${mysql[@]}"
-			mysql+=( "$MYSQL_DATABASE" )
-		fi
-
-		if [ "$MYSQL_USER" -a "$MYSQL_PASSWORD" ]; then
-			echo "CREATE USER '$MYSQL_USER'@'%' IDENTIFIED BY '$MYSQL_PASSWORD' ;" | "${mysql[@]}"
-
-			if [ "$MYSQL_DATABASE" ]; then
-				echo "GRANT ALL ON \`$MYSQL_DATABASE\`.* TO '$MYSQL_USER'@'%' ;" | "${mysql[@]}"
+		if [ -z "$MYSQL_SUPER_READ_ONLY" ]; then
+			if [ -z "$MYSQL_INITDB_SKIP_TZINFO" ]; then
+				# sed is for https://bugs.mysql.com/bug.php?id=20545
+				mysql_tzinfo_to_sql /usr/share/zoneinfo | sed 's/Local time zone must be set--see zic manual page/FCTY/' | "${mysql[@]}" mysql
 			fi
 
-			echo 'FLUSH PRIVILEGES ;' | "${mysql[@]}"
+			if [ ! -z "$MYSQL_RANDOM_ROOT_PASSWORD" ]; then
+				MYSQL_ROOT_PASSWORD="$(pwgen -1 32)"
+				echo "GENERATED ROOT PASSWORD: $MYSQL_ROOT_PASSWORD"
+			fi
+			"${mysql[@]}" <<-EOSQL
+				-- What's done in this file shouldn't be replicated
+				--  or products like mysql-fabric won't work
+				SET @@SESSION.SQL_LOG_BIN=0;
+
+				DELETE FROM mysql.user ;
+				CREATE USER 'root'@'%' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}' ;
+				GRANT ALL ON *.* TO 'root'@'%' WITH GRANT OPTION ;
+				DROP DATABASE IF EXISTS test ;
+				FLUSH PRIVILEGES ;
+			EOSQL
+
+			if [ ! -z "$MYSQL_ROOT_PASSWORD" ]; then
+				mysql+=( -p"${MYSQL_ROOT_PASSWORD}" )
+			fi
+
+			if [ "$MYSQL_DATABASE" ]; then
+				echo "CREATE DATABASE IF NOT EXISTS \`$MYSQL_DATABASE\` ;" | "${mysql[@]}"
+				mysql+=( "$MYSQL_DATABASE" )
+			fi
+
+			if [ "$MYSQL_USER" -a "$MYSQL_PASSWORD" ]; then
+				echo "CREATE USER '$MYSQL_USER'@'%' IDENTIFIED BY '$MYSQL_PASSWORD' ;" | "${mysql[@]}"
+
+				if [ "$MYSQL_DATABASE" ]; then
+					echo "GRANT ALL ON \`$MYSQL_DATABASE\`.* TO '$MYSQL_USER'@'%' ;" | "${mysql[@]}"
+				fi
+
+				echo 'FLUSH PRIVILEGES ;' | "${mysql[@]}"
+			fi
 		fi
 
 		echo
