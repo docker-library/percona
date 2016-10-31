@@ -66,8 +66,8 @@ RUN { \
 # don't reverse lookup hostnames, they are usually another container
 RUN \
 	find /etc/mysql/ -name '*.cnf' -print0 \
-		| xargs -0 grep -lE '^(bind-address|log)' \
-		| xargs sed -Ei 's/^(bind-address|log)/#&/' \
+		| xargs -0 grep -lZE '^(bind-address|log)' \
+		| xargs -0 sed -Ei 's/^(bind-address|log)/#&/' \
 	&& myCnf="$(find /etc/mysql/ -name '*.cnf' -print0 \
 		| xargs -0 grep -lE '^\[mysqld\]' \
 		| head -n1)" \
