@@ -64,9 +64,16 @@ RUN { \
 
 # comment out a few problematic configuration values
 # don't reverse lookup hostnames, they are usually another container
-RUN sed -Ei 's/^(bind-address|log)/#&/' /etc/mysql/my.cnf \
-	&& echo 'skip-host-cache\nskip-name-resolve' | awk '{ print } $1 == "[mysqld]" && c == 0 { c = 1; system("cat") }' /etc/mysql/my.cnf > /tmp/my.cnf \
-	&& mv /tmp/my.cnf /etc/mysql/my.cnf
+RUN \
+	find /etc/mysql/ -name '*.cnf' -print0 \
+		| xargs -0 grep -lZE '^(bind-address|log)' \
+		| xargs -0 sed -Ei 's/^(bind-address|log)/#&/' \
+	&& myCnf="$(find /etc/mysql/ -name '*.cnf' -print0 \
+		| xargs -0 grep -lE '^\[mysqld\]' \
+		| head -n1)" \
+	&& echo 'skip-host-cache\nskip-name-resolve' \
+		| awk '{ print } $1 == "[mysqld]" && c == 0 { c = 1; system("cat") }' "$myCnf" > /tmp/my.cnf \
+	&& mv /tmp/my.cnf "$myCnf"
 
 VOLUME ["/var/lib/mysql", "/var/log/mysql"]
 
