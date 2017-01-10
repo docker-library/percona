@@ -27,7 +27,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 		pwgen \
 	&& rm -rf /var/lib/apt/lists/*
 
-RUN apt-key adv --keyserver ha.pool.sks-keyservers.net --recv-keys \
+ENV GPG_KEYS \
 # pub   1024D/CD2EFD2A 2009-12-15
 #       Key fingerprint = 430B DF5C 56E7 C94E 848E  E60C 1C4C BDCD CD2E FD2A
 # uid                  Percona MySQL Development Team <mysql-dev@percona.com>
@@ -38,6 +38,14 @@ RUN apt-key adv --keyserver ha.pool.sks-keyservers.net --recv-keys \
 # uid                  Percona MySQL Development Team (Packaging key) <mysql-dev@percona.com>
 # sub   4096R/4CAC6D72 2016-06-30
 	4D1BB29D63D98E422B2113B19334A25F8507EFA5
+RUN set -ex; \
+	export GNUPGHOME="$(mktemp -d)"; \
+	for key in $GPG_KEYS; do \
+		gpg --keyserver ha.pool.sks-keyservers.net --recv-keys "$key"; \
+	done; \
+	gpg --export $GPG_KEYS > /etc/apt/trusted.gpg.d/percona.gpg; \
+	rm -r "$GNUPGHOME"; \
+	apt-key list
 
 RUN echo 'deb https://repo.percona.com/apt jessie main' > /etc/apt/sources.list.d/percona.list
 
