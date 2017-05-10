@@ -131,7 +131,14 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
 
 		file_env 'MYSQL_DATABASE'
 		if [ "$MYSQL_DATABASE" ]; then
-			echo "CREATE DATABASE IF NOT EXISTS \`$MYSQL_DATABASE\` ;" | "${mysql[@]}"
+		    database_defaults=""
+		    if [ "$MYSQL_DATABASE_CHARACTER_SET" ]; then
+		        database_defaults+=" DEFAULT CHARACTER SET $MYSQL_DATABASE_CHARACTER_SET"
+		    fi
+		    if [ "$MYSQL_DATABASE_COLLATION" ]; then
+		        database_defaults+=" DEFAULT COLLATE $MYSQL_DATABASE_COLLATION"
+		    fi
+			echo "CREATE DATABASE IF NOT EXISTS \`$MYSQL_DATABASE\` $database_defaults;" | "${mysql[@]}"
 			mysql+=( "$MYSQL_DATABASE" )
 		fi
 
