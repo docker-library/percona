@@ -83,6 +83,10 @@ RUN \
 		| awk '{ print } $1 == "[mysqld]" && c == 0 { c = 1; system("cat") }' "$myCnf" > /tmp/my.cnf \
 	&& mv /tmp/my.cnf "$myCnf"
 
+#my.cnf with fixed order of directories
+#see https://github.com/docker-library/percona/issues/40
+ADD my.cnf /etc/mysql/my.cnf	
+
 VOLUME ["/var/lib/mysql", "/var/log/mysql"]
 
 COPY docker-entrypoint.sh /usr/local/bin/
