@@ -76,12 +76,7 @@ RUN \
 	find /etc/mysql/ -name '*.cnf' -print0 \
 		| xargs -0 grep -lZE '^(bind-address|log)' \
 		| xargs -0 sed -Ei 's/^(bind-address|log)/#&/' \
-	&& myCnf="$(find /etc/mysql/ -name '*.cnf' -print0 \
-		| xargs -0 grep -lE '^\[mysqld\]' \
-		| head -n1)" \
-	&& echo 'skip-host-cache\nskip-name-resolve' \
-		| awk '{ print } $1 == "[mysqld]" && c == 0 { c = 1; system("cat") }' "$myCnf" > /tmp/my.cnf \
-	&& mv /tmp/my.cnf "$myCnf"
+	&& echo '[mysqld]\nskip-host-cache\nskip-name-resolve' > /etc/mysql/conf.d/docker.cnf
 
 VOLUME ["/var/lib/mysql", "/var/log/mysql"]
 
