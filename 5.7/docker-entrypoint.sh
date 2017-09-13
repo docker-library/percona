@@ -74,6 +74,13 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
 	DATADIR="$(_datadir "$@")"
 
 	if [ ! -d "$DATADIR/mysql" ]; then
+		file_env 'MYSQL_ROOT_NAME' 'root'
+		if [ -z "$MYSQL_ROOT_NAME" ]; then
+			echo >&2 'error: database is uninitialized and root name is empty '
+			echo >&2 '  MYSQL_ROOT_NAME cannot be empty'
+			exit 1
+		fi
+
 		file_env 'MYSQL_ROOT_PASSWORD'
 		if [ -z "$MYSQL_ROOT_PASSWORD" -a -z "$MYSQL_ALLOW_EMPTY_PASSWORD" -a -z "$MYSQL_RANDOM_ROOT_PASSWORD" ]; then
 			echo >&2 'error: database is uninitialized and password option is not specified '
@@ -90,7 +97,9 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
 		"$@" --skip-networking --socket=/var/run/mysqld/mysqld.sock &
 		pid="$!"
 
-		mysql=( mysql --protocol=socket -uroot -hlocalhost --socket=/var/run/mysqld/mysqld.sock )
+		cli=( mysql --protocol=socket --socket=/var/run/mysqld/mysqld.sock )
+
+		mysql=( "${cli[@]}" -uroot )
 
 		for i in {30..0}; do
 			if echo 'SELECT 1' | "${mysql[@]}" &> /dev/null; then
@@ -113,17 +122,20 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
 			export MYSQL_ROOT_PASSWORD="$(pwgen -1 32)"
 			echo "GENERATED ROOT PASSWORD: $MYSQL_ROOT_PASSWORD"
 		fi
+
 		"${mysql[@]}" <<-EOSQL
 			-- What's done in this file shouldn't be replicated
 			--  or products like mysql-fabric won't work
 			SET @@SESSION.SQL_LOG_BIN=0;
 
 			DELETE FROM mysql.user ;
-			CREATE USER 'root'@'%' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}' ;
-			GRANT ALL ON *.* TO 'root'@'%' WITH GRANT OPTION ;
+			CREATE USER '$MYSQL_ROOT_NAME'@'%' IDENTIFIED BY '$MYSQL_ROOT_PASSWORD' ;
+			GRANT ALL ON *.* TO '$MYSQL_ROOT_NAME'@'%' WITH GRANT OPTION ;
 			DROP DATABASE IF EXISTS test ;
 			FLUSH PRIVILEGES ;
 		EOSQL
+
+		mysql=( "${cli[@]}" -u"${MYSQL_ROOT_NAME}" )
 
 		if [ ! -z "$MYSQL_ROOT_PASSWORD" ]; then
 			mysql+=( -p"${MYSQL_ROOT_PASSWORD}" )
@@ -160,7 +172,7 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
 
 		if [ ! -z "$MYSQL_ONETIME_PASSWORD" ]; then
 			"${mysql[@]}" <<-EOSQL
-				ALTER USER 'root'@'%' PASSWORD EXPIRE;
+				ALTER USER '${MYSQL_ROOT_NAME}'@'%' PASSWORD EXPIRE;
 			EOSQL
 		fi
 		if ! kill -s TERM "$pid" || ! wait "$pid"; then
