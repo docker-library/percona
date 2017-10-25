@@ -82,6 +82,10 @@ RUN { \
 # don't reverse lookup hostnames, they are usually another container
 	&& echo '[mysqld]\nskip-host-cache\nskip-name-resolve' > /etc/mysql/conf.d/docker.cnf
 
+#my.cnf with fixed order of directories
+#see https://github.com/docker-library/percona/issues/40
+ADD my.cnf /etc/mysql/my.cnf	
+
 VOLUME ["/var/lib/mysql", "/var/log/mysql"]
 
 COPY docker-entrypoint.sh /usr/local/bin/
