@@ -10,11 +10,17 @@ RUN set -x \
 	&& apt-get update && apt-get install -y --no-install-recommends ca-certificates wget && rm -rf /var/lib/apt/lists/* \
 	&& wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$(dpkg --print-architecture)" \
 	&& wget -O /usr/local/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$(dpkg --print-architecture).asc" \
+	&& wget -O /usr/local/bin/pt-archiver "https://percona.com/get/pt-archiver" \
+	&& wget -O /usr/local/bin/pt-deadlock-logger "https://percona.com/get/pt-deadlock-logger" \
+	&& wget -O /usr/local/bin/pt-fk-error-logger "https://percona.com/get/pt-fk-error-logger" \
 	&& export GNUPGHOME="$(mktemp -d)" \
 	&& gpg --keyserver ha.pool.sks-keyservers.net --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4 \
 	&& gpg --batch --verify /usr/local/bin/gosu.asc /usr/local/bin/gosu \
 	&& rm -r "$GNUPGHOME" /usr/local/bin/gosu.asc \
 	&& chmod +x /usr/local/bin/gosu \
+	&& chmod +x /usr/local/bin/pt-archiver \
+	&& chmod +x /usr/local/bin/pt-deadlock-logger \
+	&& chmod +x /usr/local/bin/pt-fk-error-logger \
 	&& gosu nobody true \
 	&& apt-get purge -y --auto-remove ca-certificates wget
 
@@ -67,7 +73,6 @@ RUN { \
 	&& apt-get update \
 	&& apt-get install -y \
 		percona-server-server-$PERCONA_MAJOR=$PERCONA_VERSION \
-		percona-toolkit \
 	&& rm -rf /var/lib/apt/lists/* \
 # comment out any "user" entires in the MySQL config ("docker-entrypoint.sh" or "--user" will handle user switching)
 	&& sed -ri 's/^user\s/#&/' /etc/mysql/my.cnf \
