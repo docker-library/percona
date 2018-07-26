@@ -8,6 +8,8 @@ declare -A aliases=(
 self="$(basename "$BASH_SOURCE")"
 cd "$(dirname "$(readlink -f "$BASH_SOURCE")")"
 
+source '.architectures-lib'
+
 versions=( */ )
 versions=( "${versions[@]%/}" )
 
@@ -56,19 +58,24 @@ for version in "${versions[@]}"; do
 
 	fullVersion="$(git show "$commit":"$version/Dockerfile" | awk '$1 == "ENV" && $2 == "PERCONA_VERSION" { gsub(/-.*$/, "", $3); print $3; exit }')"
 
-	versionAliases=()
-	while [ "$fullVersion" != "$version" -a "${fullVersion%[.-]*}" != "$fullVersion" ]; do
-		versionAliases+=( $fullVersion )
-		fullVersion="${fullVersion%[.-]*}"
-	done
-	versionAliases+=(
-		$version
-		${aliases[$version]:-}
-	)
+	versionAliases=( $fullVersion )
+	if [ "$version" != "$fullVersion" ]; then
+		versionAliases+=( $version )
+	fi
+	versionAliases+=( ${aliases[$version]:-} )
+
+	from="$(git show "$commit":"$version/Dockerfile" | awk '$1 == "FROM" { print $2; exit }')"
+	distro="${from%%:*}" # "debian", "ubuntu"
+	suite="${from#$distro:}" # "jessie-slim", "xenial"
+	suite="${suite%-slim}" # "jessie", "xenial"
+
+	variantAliases=( "${versionAliases[@]/%/-$suite}" )
+	versionAliases=( "${variantAliases[@]//latest-/}" "${versionAliases[@]}" )
 
 	echo
 	cat <<-EOE
 		Tags: $(join ', ' "${versionAliases[@]}")
+		Architectures: $(join ', ' $(versionArches $version))
 		GitCommit: $commit
 		Directory: $version
 	EOE
