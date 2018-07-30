@@ -76,7 +76,7 @@ RUN set -ex; \
 	rm -r "$GNUPGHOME"; \
 	apt-key list
 
-RUN echo 'deb https://repo.percona.com/apt jessie main' > /etc/apt/sources.list.d/percona.list
+RUN echo 'deb https://repo.percona.com/apt %%SUITE%% main' > /etc/apt/sources.list.d/percona.list
 
 # bashbrew-architectures:%%ARCHES%%
 ENV PERCONA_MAJOR %%PERCONA_MAJOR%%

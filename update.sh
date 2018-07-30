@@ -1,9 +1,9 @@
 #!/bin/bash
 set -eo pipefail
 
-defaultSuite='jessie'
+defaultSuite='stretch'
 declare -A suites=(
-#	[5.7]='stretch'
+	#[5.5]='jessie'
 )
 declare -A dpkgArchToBashbrew=(
 	[amd64]='amd64'
