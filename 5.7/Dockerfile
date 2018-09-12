@@ -80,7 +80,7 @@ RUN echo 'deb https://repo.percona.com/apt stretch main' > /etc/apt/sources.list
 
 # bashbrew-architectures: amd64
 ENV PERCONA_MAJOR 5.7
-ENV PERCONA_VERSION 5.7.22-22-1.stretch
+ENV PERCONA_VERSION 5.7.23-23-1.stretch
 
 # the "/var/lib/mysql" stuff here is because the mysql-server postinst doesn't have an explicit way to disable the mysql_install_db codepath besides having a database already "configured" (ie, stuff in /var/lib/mysql/mysql)
 # also, we set debconf keys to make APT a little quieter
