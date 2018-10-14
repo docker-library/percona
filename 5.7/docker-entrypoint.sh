@@ -40,6 +40,24 @@ file_env() {
 	unset "$fileVar"
 }
 
+# usage: process_init_file FILENAME MYSQLCOMMAND...
+#    ie: process_init_file foo.sh mysql -uroot
+# (process a single initializer file, based on its extension. we define this
+# function here, so that initializer scripts (*.sh) can use the same logic,
+# potentially recursively, or override the logic used in subsequent calls)
+process_init_file() {
+	local f="$1"; shift
+	local mysql=( "$@" )
+
+	case "$f" in
+		*.sh)     echo "$0: running $f"; . "$f" ;;
+		*.sql)    echo "$0: running $f"; "${mysql[@]}" < "$f"; echo ;;
+		*.sql.gz) echo "$0: running $f"; gunzip -c "$f" | "${mysql[@]}"; echo ;;
+		*)        echo "$0: ignoring $f" ;;
+	esac
+	echo
+}
+
 _check_config() {
 	toRun=( "$@" --verbose --help )
 	if ! errors="$("${toRun[@]}" 2>&1 >/dev/null)"; then
@@ -54,14 +72,18 @@ _check_config() {
 	fi
 }
 
-_datadir() {
-	"$@" --verbose --help 2>/dev/null | awk '$1 == "datadir" { print $2; exit }'
+# Fetch value from server config
+# We use mysqld --verbose --help instead of my_print_defaults because the
+# latter only show values present in config files, and not server defaults
+_get_config() {
+	local conf="$1"; shift
+	"$@" --verbose --help --log-bin-index="$(mktemp -u)" 2>/dev/null | awk '$1 == "'"$conf"'" { print $2; exit }'
 }
 
 # allow the container to be started with `--user`
 if [ "$1" = 'mysqld' -a -z "$wantHelp" -a "$(id -u)" = '0' ]; then
 	_check_config "$@"
-	DATADIR="$(_datadir "$@")"
+	DATADIR="$(_get_config 'datadir' "$@")"
 	mkdir -p "$DATADIR"
 	find "$DATADIR" \! -user mysql -exec chown mysql '{}' +
 	exec gosu mysql "$BASH_SOURCE" "$@"
@@ -71,7 +93,7 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
 	# still need to check config, container may have started with --user
 	_check_config "$@"
 	# Get config
-	DATADIR="$(_datadir "$@")"
+	DATADIR="$(_get_config 'datadir' "$@")"
 
 	if [ ! -d "$DATADIR/mysql" ]; then
 		file_env 'MYSQL_ROOT_PASSWORD'
@@ -87,10 +109,18 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
 		"$@" --initialize-insecure
 		echo 'Database initialized'
 
-		"$@" --skip-networking --socket=/var/run/mysqld/mysqld.sock &
+		if command -v mysql_ssl_rsa_setup > /dev/null && [ ! -e "$DATADIR/server-key.pem" ]; then
+			# https://github.com/mysql/mysql-server/blob/23032807537d8dd8ee4ec1c4d40f0633cd4e12f9/packaging/deb-in/extra/mysql-systemd-start#L81-L84
+			echo 'Initializing certificates'
+			mysql_ssl_rsa_setup --datadir="$DATADIR"
+			echo 'Certificates initialized'
+		fi
+
+		SOCKET="$(_get_config 'socket' "$@")"
+		"$@" --skip-networking --socket="${SOCKET}" &
 		pid="$!"
 
-		mysql=( mysql --protocol=socket -uroot -hlocalhost --socket=/var/run/mysqld/mysqld.sock )
+		mysql=( mysql --protocol=socket -uroot -hlocalhost --socket="${SOCKET}" )
 
 		for i in {30..0}; do
 			if echo 'SELECT 1' | "${mysql[@]}" &> /dev/null; then
@@ -162,14 +192,9 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
 		fi
 
 		echo
+		ls /docker-entrypoint-initdb.d/ > /dev/null
 		for f in /docker-entrypoint-initdb.d/*; do
-			case "$f" in
-				*.sh)     echo "$0: running $f"; . "$f" ;;
-				*.sql)    echo "$0: running $f"; "${mysql[@]}" < "$f"; echo ;;
-				*.sql.gz) echo "$0: running $f"; gunzip -c "$f" | "${mysql[@]}"; echo ;;
-				*)        echo "$0: ignoring $f" ;;
-			esac
-			echo
+			process_init_file "$f" "${mysql[@]}"
 		done
 
 		if [ ! -z "$MYSQL_ONETIME_PASSWORD" ]; then
