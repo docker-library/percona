@@ -1,6 +1,6 @@
-# https://github.com/docker-library/percona
+# https://github.com/percona/percona-docker
 
-## Maintained by: [the Docker Community](https://github.com/docker-library/percona)
+## Maintained by: [Percona](https://github.com/percona/percona-docker)
 
 This is the Git repo of the [Docker "Official Image"](https://docs.docker.com/docker-hub/official_repos/) for [percona](https://hub.docker.com/_/percona/) (not to be confused with any official percona image provided by percona upstream). See [the Docker Hub page](https://hub.docker.com/_/percona/) for the full readme on how to use this Docker image and for information regarding contributing and issues.
 
